@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from clinic_rag.config import PARSED_DIR
 from clinic_rag.db import connect
 from clinic_rag.stream import stream_ask
+from clinic_rag.agent import ask_voice
 
 
 # CORS — defaults to local dev; override in prod via ALLOWED_ORIGINS (comma-separated).
@@ -103,6 +104,37 @@ def ask(body: AskBody) -> StreamingResponse:
             "X-Accel-Buffering": "no",  # nginx: don't buffer SSE
         },
     )
+
+
+@app.post("/vapi-rag")
+def vapi_rag(body: dict) -> dict:
+    """
+    Vapi 'custom function' tool endpoint.
+
+    Vapi sends:
+      { "message": { "toolCallList": [ { "id": "...", "function": { "name": "rag_query",
+                                                                     "arguments": "{\"question\": \"...\"}" } } ] } }
+    Vapi expects back:
+      { "results": [ { "toolCallId": "...", "result": "..." } ] }
+    """
+    import json as _json
+
+    msg = body.get("message", body)
+    tool_calls = msg.get("toolCallList") or msg.get("tool_calls") or []
+    if not tool_calls:
+        # Fallback: handle direct {"question": "..."} for debugging
+        if "question" in body:
+            return ask_voice(body["question"])
+        raise HTTPException(400, "No tool calls and no question.")
+
+    results = []
+    for tc in tool_calls:
+        args_raw = tc.get("function", {}).get("arguments") or "{}"
+        args = _json.loads(args_raw) if isinstance(args_raw, str) else args_raw
+        question = args.get("question", "")
+        out = ask_voice(question)
+        results.append({"toolCallId": tc.get("id"), "result": out["answer"]})
+    return {"results": results}
 
 
 if __name__ == "__main__":

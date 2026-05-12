@@ -1,10 +1,19 @@
 "use client";
 
-import { Mic } from "lucide-react";
-import { motion } from "framer-motion";
+import { Mic, PhoneOff, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useVapi } from "@/lib/useVapi";
 import type { Stats } from "@/lib/types";
 
+const VAPI_PUBLIC_KEY = "5856a2f3-5247-4b26-acb7-4b3f161afd7e";
+const VAPI_ASSISTANT_ID = "bd02c0c9-e997-4fd0-b91b-d4a0298561f6";
+
 export function Header({ stats }: { stats: Stats | null }) {
+  const { state, isAgentSpeaking, isUserSpeaking, start, stop, error } = useVapi(
+    VAPI_PUBLIC_KEY,
+    VAPI_ASSISTANT_ID,
+  );
+
   return (
     <header className="relative flex items-center justify-between px-8 h-16 border-b border-[#e7e5e4] bg-white/80 backdrop-blur-md z-10">
       <div className="flex items-center gap-3">
@@ -45,16 +54,108 @@ export function Header({ stats }: { stats: Stats | null }) {
             <Pill name="Claude" sub="Sonnet 4.6" highlight />
           </>
         )}
-        <button
-          aria-label="Voice mode"
-          className="ml-2 flex items-center gap-1.5 px-3.5 h-9 rounded-lg border border-[#e7e5e4] bg-white text-[12.5px] font-medium text-[#0a0a0a] hover:bg-[#fafafa] hover:border-[#d6d3d1] transition lift"
-        >
-          <Mic className="w-3.5 h-3.5 text-[#4f46e5]" />
-          Voice
-          <span className="text-[10px] font-mono text-[#a3a3a3] ml-0.5">soon</span>
-        </button>
+        <VoiceButton
+          state={state}
+          isAgentSpeaking={isAgentSpeaking}
+          isUserSpeaking={isUserSpeaking}
+          error={error}
+          onStart={start}
+          onStop={stop}
+        />
       </div>
     </header>
+  );
+}
+
+function VoiceButton({
+  state, isAgentSpeaking, isUserSpeaking, error, onStart, onStop,
+}: {
+  state: "idle" | "connecting" | "live" | "error";
+  isAgentSpeaking: boolean;
+  isUserSpeaking: boolean;
+  error: string | null;
+  onStart: () => void;
+  onStop: () => void;
+}) {
+  if (state === "live") {
+    return (
+      <motion.button
+        layout
+        initial={{ scale: 0.9 }}
+        animate={{ scale: 1 }}
+        onClick={onStop}
+        className="ml-2 flex items-center gap-2 px-3.5 h-9 rounded-lg font-medium text-[12.5px] text-white transition lift relative overflow-hidden"
+        style={{
+          background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
+          boxShadow: "0 2px 8px -2px rgba(220, 38, 38, 0.40)",
+        }}
+        aria-label="End voice call"
+      >
+        <div className="flex items-center gap-0.5">
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={i}
+              animate={{
+                height: isAgentSpeaking
+                  ? [4, 14, 4]
+                  : isUserSpeaking
+                  ? [4, 10, 4]
+                  : [4, 6, 4],
+              }}
+              transition={{
+                duration: 0.6,
+                repeat: Infinity,
+                delay: i * 0.12,
+                ease: "easeInOut",
+              }}
+              className="w-[3px] rounded-full bg-white/90"
+            />
+          ))}
+        </div>
+        <span>End</span>
+        <PhoneOff className="w-3.5 h-3.5" />
+      </motion.button>
+    );
+  }
+
+  if (state === "connecting") {
+    return (
+      <button
+        disabled
+        className="ml-2 flex items-center gap-1.5 px-3.5 h-9 rounded-lg border border-[#c7d2fe] bg-[#eef2ff] text-[12.5px] font-medium text-[#4338ca]"
+      >
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        Connecting…
+      </button>
+    );
+  }
+
+  if (state === "error") {
+    return (
+      <button
+        disabled
+        title={error ?? "Voice error"}
+        className="ml-2 flex items-center gap-1.5 px-3.5 h-9 rounded-lg border border-[#fecaca] bg-[#fef2f2] text-[12.5px] font-medium text-[#b91c1c]"
+      >
+        <Mic className="w-3.5 h-3.5" />
+        Mic error
+      </button>
+    );
+  }
+
+  // idle
+  return (
+    <motion.button
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.97 }}
+      onClick={onStart}
+      aria-label="Start voice call with Cora"
+      className="ml-2 flex items-center gap-1.5 px-3.5 h-9 rounded-lg border border-[#c7d2fe] bg-[#eef2ff] text-[12.5px] font-medium text-[#4338ca] hover:bg-[#e0e7ff] hover:border-[#a5b4fc] transition lift"
+    >
+      <Mic className="w-3.5 h-3.5" />
+      <span>Call Cora</span>
+      <span className="text-[10px] font-mono text-[#6366f1] ml-0.5">voice</span>
+    </motion.button>
   );
 }
 

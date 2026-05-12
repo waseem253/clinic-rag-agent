@@ -33,7 +33,7 @@ import anthropic
 from langgraph.graph import StateGraph, END
 
 from .config import ANTHROPIC_API_KEY, CLAUDE_MODEL
-from .retrieval import hybrid_search, Hit
+from .retrieval import hybrid_search, Hit  # noqa: F401  (Hit used elsewhere)
 
 
 class AgentState(TypedDict, total=False):
@@ -128,6 +128,14 @@ ANSWER_SYSTEM = (
     "  [1] cdc_sti_treatment_2021.pdf p.45 — Syphilis > Treatment"
 )
 
+VOICE_ANSWER_SYSTEM = (
+    "You are a clinical-guideline assistant speaking to a clinician over the phone. "
+    "Answer using ONLY the provided evidence. Speak in 2–4 short, plain-English "
+    "sentences — no markdown, no bracketed citations, no bullet lists. Mention the "
+    "source naturally, e.g. 'according to the CDC's 2021 STI guidelines.' If the "
+    "evidence doesn't directly cover the question, say so honestly. Do not extrapolate."
+)
+
 
 def node_answer(state: AgentState) -> AgentState:
     hits = state["hits"]
@@ -187,3 +195,33 @@ def build_graph():
 def ask(question: str) -> AgentState:
     graph = build_graph()
     return graph.invoke({"question": question, "retries": 0})
+
+
+def ask_voice(question: str) -> dict:
+    """Voice-optimized: shorter answer, no markdown/citations in the body."""
+    triage = _ask(TRIAGE_SYSTEM, question, max_tokens=4).lower()
+    if "clinical" not in triage:
+        return {
+            "answer": "I can only answer evidence-based clinical guideline questions "
+                      "from CDC, USPSTF, and NHLBI. Could you rephrase?",
+            "in_scope": False,
+            "sources": [],
+        }
+
+    hits = hybrid_search(question, top_n=4, rerank=True)
+    evidence_block = "\n\n".join(
+        f"[{i+1}] {h.text}\n  source: {h.source}"
+        f"{' p.'+str(h.page_start) if h.page_start else ''}"
+        f"{' — '+h.heading_path if h.heading_path else ''}"
+        for i, h in enumerate(hits)
+    )
+    answer = _ask(VOICE_ANSWER_SYSTEM, f"Question: {question}\n\nEvidence:\n{evidence_block}",
+                  max_tokens=400)
+    return {
+        "answer": answer,
+        "in_scope": True,
+        "sources": [
+            {"source": h.source, "page": h.page_start, "heading": h.heading_path}
+            for h in hits
+        ],
+    }
