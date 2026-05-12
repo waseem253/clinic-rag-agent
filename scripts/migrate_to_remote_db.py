@@ -33,7 +33,7 @@ def main() -> None:
 
     # 1. Bootstrap schema on remote
     from clinic_rag.db import SCHEMA, HNSW_INDEX
-    with psycopg.connect(REMOTE_DATABASE_URL) as conn, conn.cursor() as cur:
+    with psycopg.connect(REMOTE_DATABASE_URL, prepare_threshold=None) as conn, conn.cursor() as cur:
         cur.execute(SCHEMA)
         conn.commit()
     print("✓ Schema applied to remote")
@@ -43,7 +43,7 @@ def main() -> None:
         src_cur.execute("SELECT id, source, title, publisher, pub_year, pages FROM documents ORDER BY id")
         docs = src_cur.fetchall()
 
-    with psycopg.connect(REMOTE_DATABASE_URL) as dst, dst.cursor() as dst_cur:
+    with psycopg.connect(REMOTE_DATABASE_URL, prepare_threshold=None) as dst, dst.cursor() as dst_cur:
         dst_cur.execute("TRUNCATE documents RESTART IDENTITY CASCADE")
         for d in docs:
             dst_cur.execute(
@@ -59,7 +59,7 @@ def main() -> None:
     # 3. Copy chunks in batches
     BATCH = 200
     with psycopg.connect(DATABASE_URL, row_factory=dict_row) as src, src.cursor() as src_cur, \
-         psycopg.connect(REMOTE_DATABASE_URL) as dst, dst.cursor() as dst_cur:
+         psycopg.connect(REMOTE_DATABASE_URL, prepare_threshold=None) as dst, dst.cursor() as dst_cur:
         src_cur.execute("SELECT COUNT(*) AS n FROM chunks")
         total = src_cur.fetchone()["n"]
         print(f"Copying {total} chunks in batches of {BATCH}…")

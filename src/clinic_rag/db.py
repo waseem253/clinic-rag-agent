@@ -4,8 +4,10 @@ from psycopg.rows import dict_row
 from .config import DATABASE_URL, EMBED_DIMS
 
 
-def connect():
-    return psycopg.connect(DATABASE_URL, row_factory=dict_row)
+def connect(url: str | None = None):
+    # prepare_threshold=None disables prepared-statement caching, which is required
+    # when connecting through Supabase's transaction pooler (port 6543).
+    return psycopg.connect(url or DATABASE_URL, row_factory=dict_row, prepare_threshold=None)
 
 
 SCHEMA = f"""
