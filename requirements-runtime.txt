@@ -1,0 +1,12 @@
+# Slim runtime deps — no Docling/PyTorch/transformers (those are ingest-time only).
+anthropic>=0.40.0
+voyageai>=0.2.0
+cohere>=5.10.0
+psycopg[binary,pool]>=3.2.0
+pgvector>=0.3.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+sse-starlette>=2.1.0
+python-dotenv>=1.0.1
+pydantic>=2.9.0
+langgraph>=0.2.50

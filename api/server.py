@@ -14,6 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+import os
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -24,10 +26,20 @@ from clinic_rag.db import connect
 from clinic_rag.stream import stream_ask
 
 
+# CORS — defaults to local dev; override in prod via ALLOWED_ORIGINS (comma-separated).
+DEFAULT_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
+ALLOWED_ORIGINS = (
+    [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+    or DEFAULT_ORIGINS
+)
+# Allow any *.vercel.app preview deploy too.
+ALLOW_ORIGIN_REGEX = os.environ.get("ALLOWED_ORIGIN_REGEX", r"https://.*\.vercel\.app")
+
 app = FastAPI(title="Clinical RAG Agent API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOW_ORIGIN_REGEX,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -95,4 +107,5 @@ def ask(body: AskBody) -> StreamingResponse:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
+    port = int(os.environ.get("PORT", "8000"))
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
