@@ -1,0 +1,35 @@
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+next-env.d.ts
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Generated / cached data
+parsed/
+parse_log.txt
+parse_results.json
+
+# Deploy / runtime
+.vercel
+*.log
+
+# Media
+*.mp4
+*.mov
