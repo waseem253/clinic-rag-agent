@@ -6,7 +6,7 @@ import { useVapi } from "@/lib/useVapi";
 import type { Stats } from "@/lib/types";
 
 const VAPI_PUBLIC_KEY = "5856a2f3-5247-4b26-acb7-4b3f161afd7e";
-const VAPI_ASSISTANT_ID = "bd02c0c9-e997-4fd0-b91b-d4a0298561f6";
+const VAPI_ASSISTANT_ID = "8c126dad-a30c-4f9a-8dd7-9276041172f2";
 
 export function Header({ stats }: { stats: Stats | null }) {
   const { state, isAgentSpeaking, isUserSpeaking, start, stop, error } = useVapi(
